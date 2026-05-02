@@ -11,75 +11,44 @@
       box-sizing: border-box;
     }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: sans-serif;
       background: #f5f5f5;
-      display: flex;
-      justify-content: center;
-      align-items: center;
       min-height: 100vh;
       padding: 20px;
     }
     .container {
-      width: 100%;
       max-width: 400px;
+      margin: 0 auto;
       text-align: center;
-    }
-    .header {
-      background: white;
-      border-radius: 16px;
-      padding: 30px 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-      margin-bottom: 20px;
     }
     .camera-box {
       width: 100%;
       background: #000;
       border-radius: 16px;
       overflow: hidden;
-      position: relative;
       margin-bottom: 20px;
+      position: relative;
     }
     video {
       width: 100%;
       display: block;
       object-fit: cover;
-      background: #000;
     }
     .btn {
-      display: block;
       width: 100%;
       padding: 16px;
-      margin: 10px 0;
       border: none;
       border-radius: 12px;
       font-size: 18px;
       font-weight: 600;
+      margin: 10px 0;
       cursor: pointer;
-      transition: opacity 0.2s;
     }
-    .btn:active {
-      opacity: 0.8;
-    }
-    .btn-primary {
-      background: #007aff;
-      color: white;
-    }
-    .btn-success {
-      background: #34c759;
-      color: white;
-    }
-    .btn-danger {
-      background: #ff3b30;
-      color: white;
-    }
-    .btn-outline {
-      background: white;
-      border: 2px solid #007aff;
-      color: #007aff;
-    }
-    .hidden {
-      display: none !important;
-    }
+    .btn-primary { background: #007aff; color: #fff; }
+    .btn-success { background: #34c759; color: white; }
+    .btn-danger { background: #ff3b30; color: #fff; }
+    .btn-outline { background: #fff; border: 2px solid #007aff; color: #007aff; }
+    .hidden { display: none !important; }
     .status {
       background: #fff3cd;
       color: #856404;
@@ -87,11 +56,10 @@
       border-radius: 12px;
       margin-bottom: 15px;
       font-size: 14px;
-      line-height: 1.5;
     }
     .city-select {
-      margin: 12px 0;
       text-align: left;
+      margin: 12px 0;
     }
     select {
       width: 100%;
@@ -99,16 +67,6 @@
       border-radius: 12px;
       border: 1px solid #ddd;
       font-size: 16px;
-      background: white;
-    }
-    .wechat-warning {
-      background: #ff3b30;
-      color: white;
-      padding: 16px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      text-align: center;
-      font-weight: bold;
     }
     .recording-indicator {
       position: absolute;
@@ -125,277 +83,160 @@
       50% { opacity: 0.3; }
       100% { opacity: 1; }
     }
-    .action-buttons {
-      margin-top: 15px;
-    }
-    .phone-links {
-      margin-top: 15px;
-      padding: 15px;
-      background: white;
-      border-radius: 12px;
-      text-align: left;
-    }
   </style>
 </head>
 <body>
   <div class="container" id="app">
-    <div id="wechatWarning" class="wechat-warning hidden">
-      请点击右上角<br>选择「在浏览器中打开」
+    <div class="camera-box">
+      <video id="preview" autoplay playsinline muted></video>
+      <div id="recIndicator" class="recording-indicator hidden"></div>
     </div>
 
-    <div id="mainUI">
-      <div class="camera-box">
-        <video id="preview" autoplay playsinline muted></video>
-        <div id="recIndicator" class="recording-indicator hidden"></div>
+    <div id="startSection">
+      <div class="city-select">
+        <select id="citySelect">
+          <option value="">请选择所在城市</option>
+          <option value="全国">其他城市(全国通用)</option>
+          <option value="北京">北京</option>
+          <option value="上海">上海</option>
+          <option value="广州">广州</option>
+          <option value="深圳">深圳</option>
+          <option value="杭州">杭州</option>
+          <option value="成都">成都</option>
+          <option value="武汉">武汉</option>
+        </select>
       </div>
+      <div id="tipText" class="status">先选城市，再点开始录制</div>
+      <button class="btn btn-primary" id="startBtn">开始录制取证</button>
+    </div>
 
-      <div id="startSection">
-        <button class="btn btn-primary" id="startBtn">开始录制</button>
-        <div id="positionStatus" class="status" style="background:#e8f0fe;color:#1a73e8;">
-          启动后将自动获取位置与禁烟法规
-        </div>
-      </div>
-
-      <div id="controlSection" class="hidden">
-        <div id="lawText" class="status"></div>
-        <div class="action-buttons">
-          <button class="btn btn-success" id="stoppedBtn">✅ 已灭烟，结束录像</button>
-          <button class="btn btn-danger" id="continueBtn">❌ 未灭烟，持续录像</button>
-        </div>
-      </div>
-
-      <div id="reportSection" class="hidden">
-        <div id="reportMsg" class="status" style="background:#f8d7da;color:#721c24;"></div>
-        <div class="phone-links" id="phoneLinks"></div>
-        <button class="btn btn-outline" id="stopRecordingFinal" style="margin-top:15px;">停止录像并保存</button>
-      </div>
+    <div id="ctrlSection" class="hidden">
+      <div id="lawTip" class="status"></div>
+      <button class="btn btn-success" id="saveBtn">结束并保存视频</button>
     </div>
   </div>
 
   <script>
     const localLaws = {
-      "北京": { law: "《北京市控制吸烟条例》", text: "公共场所、工作场所的室内区域以及公共交通工具内禁止吸烟。", phone: "12345" },
-      "上海": { law: "《上海市公共场所控制吸烟条例》", text: "室内公共场所、室内工作场所、公共交通工具内禁止吸烟。", phone: "12345" },
-      "广州": { law: "《广州市控制吸烟条例》", text: "室内工作场所、室内公共场所和公共交通工具内禁止吸烟。", phone: "12345" },
-      "深圳": { law: "《深圳经济特区控制吸烟条例》", text: "室内工作场所、室内公共场所和公共交通工具内禁止吸烟。", phone: "12345" },
-      "杭州": { law: "《杭州市公共场所控制吸烟条例》", text: "室内公共场所、室内工作场所、公共交通工具内禁止吸烟。", phone: "12345" },
-      "成都": { law: "《成都市公共场所控制吸烟条例》", text: "公共场所的室内区域禁止吸烟。", phone: "12345" },
-      "武汉": { law: "《武汉市控制吸烟条例》", text: "室内公共场所、室内工作场所、公共交通工具内禁止吸烟。", phone: "12345" },
-      "西安": { law: "《西安市控制吸烟管理办法》", text: "室内公共场所、公共交通工具内禁止吸烟。", phone: "12345" },
-      "南京": { law: "《南京市公共场所控制吸烟条例》", text: "室内公共场所、室内工作场所、公共交通工具内禁止吸烟。", phone: "12345" },
-      "郑州": { law: "《郑州市公共场所禁止吸烟条例》", text: "公共场所的室内区域禁止吸烟。", phone: "12320" }
+      "全国": { law: "《公共场所卫生管理条例实施细则》", tip: "室内公共场所全面禁烟，请立即熄灭香烟。" },
+      "北京": { law: "《北京市控制吸烟条例》", tip: "本市室内公共场所全面禁烟，请立即熄灭香烟。" },
+      "上海": { law: "《上海市公共场所控制吸烟条例》", tip: "本市室内全面禁烟，请配合熄灭香烟。" },
+      "广州": { law: "《广州市控制吸烟条例》", tip: "室内禁止吸烟，请马上把烟灭掉。" },
+      "深圳": { law: "《深圳经济特区控制吸烟条例》", tip: "全城室内禁烟，麻烦立即停止吸烟。" },
+      "杭州": { law: "《杭州市公共场所控制吸烟条例》", tip: "室内公共场所禁止吸烟，请配合熄灭香烟。" },
+      "成都": { law: "《成都市公共场所控制吸烟条例》", tip: "公共区域禁止吸烟，请立即灭烟。" },
+      "武汉": { law: "《武汉市控制吸烟条例》", tip: "室内全程禁烟，请马上熄灭香烟。" }
     };
 
-    const nationalLaw = { law: "《公共场所卫生管理条例实施细则》", text: "室内公共场所禁止吸烟。", phone: "12345" };
+    let stream = null;
+    let mediaRecorder = null;
+    let chunks = [];
+    let nowLaw = "";
 
-    let mediaStream = null, mediaRecorder = null, recordedChunks = [];
-    let currentCity = '', currentLaw = nationalLaw, isRecording = false;
-
-    const wechatWarning = document.getElementById('wechatWarning');
-    const mainUI = document.getElementById('mainUI');
     const preview = document.getElementById('preview');
-    const recIndicator = document.getElementById('recIndicator');
-    const startSection = document.getElementById('startSection');
-    const controlSection = document.getElementById('controlSection');
-    const reportSection = document.getElementById('reportSection');
     const startBtn = document.getElementById('startBtn');
-    const stoppedBtn = document.getElementById('stoppedBtn');
-    const continueBtn = document.getElementById('continueBtn');
-    const stopRecordingFinal = document.getElementById('stopRecordingFinal');
-    const lawTextDiv = document.getElementById('lawText');
-    const reportMsg = document.getElementById('reportMsg');
-    const phoneLinks = document.getElementById('phoneLinks');
-    const positionStatus = document.getElementById('positionStatus');
+    const saveBtn = document.getElementById('saveBtn');
+    const citySelect = document.getElementById('citySelect');
+    const startSection = document.getElementById('startSection');
+    const ctrlSection = document.getElementById('ctrlSection');
+    const lawTip = document.getElementById('lawTip');
+    const recIndicator = document.getElementById('recIndicator');
 
-    function isWechat() {
-      const ua = navigator.userAgent.toLowerCase();
-      return ua.includes('micromessenger') || ua.includes('mqqbrowser');
+    // 语音播报
+    function speak(txt) {
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = 'zh-CN';
+      u.rate = 0.9;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
     }
 
-    if (isWechat()) {
-      wechatWarning.classList.remove('hidden');
-      mainUI.classList.add('hidden');
-    } else {
-      wechatWarning.classList.add('hidden');
-      mainUI.classList.remove('hidden');
-    }
-
-    function speak(text) {
-      return new Promise((resolve) => {
-        if (!('speechSynthesis' in window)) return resolve();
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'zh-CN';
-        utterance.rate = 0.9;
-        utterance.pitch = 1.0;
-        utterance.onend = resolve;
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
-      });
-    }
-
-    async function getCityFromCoords(lat, lon) {
+    // 启动摄像头
+    async function openCam() {
       try {
-        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&accept-language=zh`;
-        const resp = await fetch(url);
-        const data = await resp.json();
-        const address = data.address || {};
-        const city = address.city || address.town || address.state || '';
-        return city.replace(/市$/, '');
-      } catch (e) { return ''; }
-    }
-
-    async function getLocationAndLaw() {
-      return new Promise((resolve) => {
-        if (!navigator.geolocation) { showCitySelect(resolve); return; }
-        positionStatus.textContent = '正在获取位置...';
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            const { latitude, longitude } = pos.coords;
-            const city = await getCityFromCoords(latitude, longitude);
-            if (city && localLaws[city]) {
-              currentCity = city;
-              currentLaw = localLaws[city];
-              positionStatus.textContent = `📍 已定位：${city}，适用${currentLaw.law}`;
-            } else {
-              currentLaw = nationalLaw;
-              currentCity = city || '未知城市';
-              positionStatus.textContent = `📍 当前位置：${currentCity}，使用全国禁烟规定`;
-            }
-            resolve();
-          },
-          () => { showCitySelect(resolve); },
-          { timeout: 5000, enableHighAccuracy: false }
-        );
-      });
-    }
-
-    function showCitySelect(callback) {
-      positionStatus.innerHTML = `
-        <div class="city-select">
-          <label>无法自动定位，请手动选择城市：</label>
-          <select id="citySelect">
-            <option value="">-- 选择城市 --</option>
-            ${Object.keys(localLaws).map(c => `<option value="${c}">${c}</option>`).join('')}
-          </select>
-        </div>
-      `;
-      const select = document.getElementById('citySelect');
-      select.addEventListener('change', () => {
-        const val = select.value;
-        if (val && localLaws[val]) {
-          currentCity = val;
-          currentLaw = localLaws[val];
-          positionStatus.textContent = `📍 已选择：${val}，适用${currentLaw.law}`;
-        } else {
-          currentLaw = nationalLaw;
-          positionStatus.textContent = `使用全国性禁烟规定`;
-        }
-        callback();
-      });
-    }
-
-    async function startCamera() {
-      try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: true });
-        preview.srcObject = mediaStream;
-        preview.play();
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+          audio: true
+        });
+        preview.srcObject = stream;
         return true;
-      } catch (err) {
-        alert('无法启动摄像头/麦克风，请检查权限');
+      } catch (e) {
+        alert("无法调取摄像头，请给浏览器开启相机、麦克风权限");
         return false;
       }
     }
 
-    function startRecording() {
-      recordedChunks = [];
-      let options = { mimeType: 'video/webm' };
-      try { mediaRecorder = new MediaRecorder(mediaStream, options); }
-      catch (e) {
-        options.mimeType = 'video/mp4';
-        mediaRecorder = new MediaRecorder(mediaStream, options);
+    // 开始录像
+    function startRec() {
+      chunks = [];
+      let opt = { mimeType: 'video/webm' };
+      try {
+        mediaRecorder = new MediaRecorder(stream, opt);
+      } catch (e) {
+        mediaRecorder = new MediaRecorder(stream);
       }
-      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+      mediaRecorder.ondataavailable = e => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
       mediaRecorder.start();
-      isRecording = true;
       recIndicator.classList.remove('hidden');
     }
 
-    function stopRecording() {
-      return new Promise((resolve) => {
-        if (!mediaRecorder || mediaRecorder.state === 'inactive') { resolve(null); return; }
+    // 停止并强制下载（修复不保存的bug）
+    function stopRecAndSave() {
+      return new Promise(resolve => {
         mediaRecorder.onstop = () => {
-          const blob = new Blob(recordedChunks, { type: 'video/webm' });
-          resolve(blob);
+          recIndicator.classList.add('hidden');
+          const blob = new Blob(chunks, { type: "video/webm" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `禁烟取证_${new Date().toLocaleDateString()}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          // 兼容手机强制触发
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+          }, 500);
+          resolve();
         };
         mediaRecorder.stop();
-        isRecording = false;
-        recIndicator.classList.add('hidden');
-        if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
+        // 关闭摄像头
+        if (stream) stream.getTracks().forEach(t => t.stop());
       });
     }
 
-    function downloadBlob(blob, filename) {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
+    // 开始按钮
     startBtn.addEventListener('click', async () => {
-      await getLocationAndLaw();
-      const cameraReady = await startCamera();
-      if (!cameraReady) return;
-      startRecording();
+      const city = citySelect.value;
+      if (!city) {
+        alert("请先选择城市");
+        return;
+      }
+      const lawInfo = localLaws[city];
+      nowLaw = lawInfo.law;
+      lawTip.innerText = `依据${nowLaw}：${lawInfo.tip}`;
+
+      const camOk = await openCam();
+      if (!camOk) return;
+
+      startRec();
+      speak(`现在依据${nowLaw}进行劝阻，此处属于禁烟区域，请立即熄灭香烟，否则将录像取证并举报。`);
+
       startSection.classList.add('hidden');
-      controlSection.classList.remove('hidden');
-      reportSection.classList.add('hidden');
-      const warningText = `开始取证，全程录音录像，现在依据${currentLaw.law}依法对你进行劝阻，依照法律法规此处禁烟，麻烦立即把烟灭掉！`;
-      lawTextDiv.textContent = `📢 ${warningText}`;
-      await speak(warningText);
+      ctrlSection.classList.remove('hidden');
     });
 
-    stoppedBtn.addEventListener('click', async () => {
-      await speak('取证完毕，已制止。感谢配合，请共同维护禁烟环境。');
-      const blob = await stopRecording();
-      if (blob) downloadBlob(blob, `禁烟劝阻_已灭烟_${new Date().toISOString().slice(0,10)}.webm`);
-      resetUI();
-    });
-
-    continueBtn.addEventListener('click', async () => {
-      const failText = `对方拒绝遵守${currentLaw.law}，本次劝阻失败。我将向场所管理方以及12345热线举报。`;
-      await speak(failText);
-      controlSection.classList.add('hidden');
-      reportSection.classList.remove('hidden');
-      reportMsg.textContent = `⚠️ ${failText}`;
-      let phoneHTML = '';
-      if (currentLaw.phone) phoneHTML += `<p>📞 举报电话：<a href="tel:${currentLaw.phone}">${currentLaw.phone}</a></p>`;
-      if (currentLaw.phone !== '12345') phoneHTML += `<p>📞 全国政务热线：<a href="tel:12345">12345</a></p>`;
-      phoneHTML += `<p style="font-size:14px;color:#666;">保存录像后可拨打举报</p>`;
-      phoneLinks.innerHTML = phoneHTML;
-    });
-
-    stopRecordingFinal.addEventListener('click', async () => {
-      const blob = await stopRecording();
-      if (blob) downloadBlob(blob, `禁烟劝阻_未灭烟_${new Date().toISOString().slice(0,10)}.webm`);
-      resetUI();
-    });
-
-    function resetUI() {
+    // 结束保存按钮
+    saveBtn.addEventListener('click', async () => {
+      await stopRecAndSave();
+      alert("录像已自动下载保存，请查看手机文件/相册");
+      // 重置界面
       startSection.classList.remove('hidden');
-      controlSection.classList.add('hidden');
-      reportSection.classList.add('hidden');
-      lawTextDiv.textContent = '';
-      reportMsg.textContent = '';
-      phoneLinks.innerHTML = '';
+      ctrlSection.classList.add('hidden');
       preview.srcObject = null;
-      if (mediaStream) mediaStream.getTracks().forEach(track => track.stop());
-      mediaStream = null; mediaRecorder = null; recordedChunks = []; isRecording = false;
-      recIndicator.classList.add('hidden');
-    }
+    });
   </script>
 </body>
 </html>
